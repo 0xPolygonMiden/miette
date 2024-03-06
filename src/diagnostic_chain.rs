@@ -3,6 +3,8 @@ Iterate over error `.diagnostic_source()` chains.
 */
 
 use crate::protocol::Diagnostic;
+use crate::StdError;
+use core::fmt;
 
 /// Iterator of a chain of cause errors.
 #[derive(Clone, Default)]
@@ -13,13 +15,13 @@ pub(crate) struct DiagnosticChain<'a> {
 
 impl<'a> DiagnosticChain<'a> {
     pub(crate) fn from_diagnostic(head: &'a dyn Diagnostic) -> Self {
-        DiagnosticChain {
+        Self {
             state: Some(ErrorKind::Diagnostic(head)),
         }
     }
 
-    pub(crate) fn from_stderror(head: &'a (dyn std::error::Error + 'static)) -> Self {
-        DiagnosticChain {
+    pub(crate) fn from_stderror(head: &'a (dyn StdError + 'static)) -> Self {
+        Self {
             state: Some(ErrorKind::StdError(head)),
         }
     }
@@ -59,23 +61,29 @@ impl ExactSizeIterator for DiagnosticChain<'_> {
 #[derive(Clone)]
 pub(crate) enum ErrorKind<'a> {
     Diagnostic(&'a dyn Diagnostic),
-    StdError(&'a (dyn std::error::Error + 'static)),
+    StdError(&'a (dyn StdError + 'static)),
 }
 
 impl<'a> ErrorKind<'a> {
-    fn get_nested(&self) -> Option<ErrorKind<'a>> {
+    fn get_nested(&self) -> Option<Self> {
         match self {
-            ErrorKind::Diagnostic(d) => d
-                .diagnostic_source()
-                .map(ErrorKind::Diagnostic)
-                .or_else(|| d.source().map(ErrorKind::StdError)),
-            ErrorKind::StdError(e) => e.source().map(ErrorKind::StdError),
+            Self::Diagnostic(d) => match d.diagnostic_source().map(Self::Diagnostic) {
+                None => match unsafe { core::mem::transmute(d.source()) } {
+                    None => None,
+                    Some(e) => Some(Self::StdError(e)),
+                },
+                Some(d) => Some(d),
+            },
+            Self::StdError(ref e) => match unsafe { core::mem::transmute(e.source()) } {
+                Some(e) => Some(Self::StdError(e)),
+                None => None,
+            },
         }
     }
 }
 
-impl<'a> std::fmt::Debug for ErrorKind<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'a> fmt::Debug for ErrorKind<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ErrorKind::Diagnostic(d) => d.fmt(f),
             ErrorKind::StdError(e) => e.fmt(f),
@@ -83,8 +91,8 @@ impl<'a> std::fmt::Debug for ErrorKind<'a> {
     }
 }
 
-impl<'a> std::fmt::Display for ErrorKind<'a> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl<'a> fmt::Display for ErrorKind<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ErrorKind::Diagnostic(d) => d.fmt(f),
             ErrorKind::StdError(e) => e.fmt(f),

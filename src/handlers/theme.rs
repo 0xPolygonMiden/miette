@@ -1,5 +1,4 @@
-use std::io::IsTerminal;
-
+use alloc::{string::String, vec::Vec};
 use owo_colors::Style;
 
 /**
@@ -67,8 +66,10 @@ impl GraphicalTheme {
     }
 }
 
+#[cfg(feature = "std")]
 impl Default for GraphicalTheme {
     fn default() -> Self {
+        use std::io::IsTerminal;
         match std::env::var("NO_COLOR") {
             _ if !std::io::stdout().is_terminal() || !std::io::stderr().is_terminal() => {
                 Self::ascii()
@@ -76,6 +77,13 @@ impl Default for GraphicalTheme {
             Ok(string) if string != "0" => Self::unicode_nocolor(),
             _ => Self::unicode(),
         }
+    }
+}
+
+#[cfg(not(feature = "std"))]
+impl Default for GraphicalTheme {
+    fn default() -> Self {
+        Self::unicode_nocolor()
     }
 }
 

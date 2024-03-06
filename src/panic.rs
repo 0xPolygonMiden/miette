@@ -2,6 +2,10 @@ use backtrace::Backtrace;
 use thiserror::Error;
 
 use crate::{self as miette, Context, Diagnostic, Result};
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+};
 
 /// Tells miette to render panics using its rendering engine.
 pub fn set_panic_hook() {
@@ -20,7 +24,7 @@ pub fn set_panic_hook() {
                 .with_context(|| format!("at {}:{}:{}", loc.file(), loc.line(), loc.column()));
         }
         if let Err(err) = report.with_context(|| "Main thread panicked.".to_string()) {
-            eprintln!("Error: {:?}", err);
+            std::eprintln!("Error: {:?}", err);
         }
     }));
 }

@@ -1,4 +1,5 @@
-use std::fmt;
+use alloc::{boxed::Box, string::String};
+use core::fmt;
 
 use crate::highlighters::Highlighter;
 use crate::highlighters::MietteHighlighter;
@@ -11,20 +12,15 @@ use crate::ThemeCharacters;
 use crate::ThemeStyles;
 
 /// Settings to control the color format used for graphical rendering.
-#[derive(Copy, Clone, Debug, Eq, PartialEq)]
+#[derive(Default, Copy, Clone, Debug, Eq, PartialEq)]
 pub enum RgbColors {
     /// Use RGB colors even if the terminal does not support them
     Always,
     /// Use RGB colors instead of ANSI if the terminal supports RGB
     Preferred,
     /// Always use ANSI, regardless of terminal support for RGB
+    #[default]
     Never,
-}
-
-impl Default for RgbColors {
-    fn default() -> RgbColors {
-        RgbColors::Never
-    }
 }
 
 /**
@@ -349,7 +345,7 @@ impl MietteHandlerOpts {
             !force_narrated
         } else if let Some(force_graphical) = self.force_graphical {
             force_graphical
-        } else if let Ok(env) = std::env::var("NO_GRAPHICS") {
+        } else if let Ok(env) = env_var("NO_GRAPHICS") {
             env == "0"
         } else {
             true
@@ -370,6 +366,16 @@ impl MietteHandlerOpts {
         self.width
             .unwrap_or_else(|| syscall::terminal_width().unwrap_or(80))
     }
+}
+
+#[cfg(feature = "std")]
+fn env_var(s: &str) -> Result<String, ()> {
+    std::env::var(s).map_err(|_| ())
+}
+
+#[cfg(not(feature = "std"))]
+fn env_var(_s: &str) -> Result<String, ()> {
+    Err(())
 }
 
 /**

@@ -59,7 +59,7 @@ impl DiagnosticSource {
                     };
                     quote! {
                         Self::#ident #display_pat => {
-                            std::option::Option::Some(std::borrow::Borrow::borrow(#rel))
+                            Some(alloc::borrow::Borrow::borrow(#rel))
                         }
                     }
                 })
@@ -70,8 +70,8 @@ impl DiagnosticSource {
     pub(crate) fn gen_struct(&self) -> Option<TokenStream> {
         let rel = &self.0;
         Some(quote! {
-            fn diagnostic_source<'a>(&'a self) -> std::option::Option<&'a dyn miette::Diagnostic> {
-                std::option::Option::Some(std::borrow::Borrow::borrow(&self.#rel))
+            fn diagnostic_source<'a>(&'a self) -> Option<&'a dyn miette::Diagnostic> {
+                Some(alloc::borrow::Borrow::borrow(&self.#rel))
             }
         })
     }

@@ -1,4 +1,5 @@
-use std::fmt;
+use alloc::{boxed::Box, string::String, vec::Vec};
+use core::fmt;
 
 use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 
@@ -290,7 +291,7 @@ impl NarratableReportHandler {
         let context_data = source
             .read_span(context_span, self.context_lines, self.context_lines)
             .map_err(|_| fmt::Error)?;
-        let context = std::str::from_utf8(context_data.data()).expect("Bad utf8 detected");
+        let context = core::str::from_utf8(context_data.data()).expect("Bad utf8 detected");
         let mut line = context_data.line();
         let mut column = context_data.column();
         let mut offset = context_data.span().offset();

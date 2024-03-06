@@ -1,4 +1,5 @@
-use std::{marker::PhantomData, ptr::NonNull};
+use alloc::boxed::Box;
+use core::{marker::PhantomData, ptr::NonNull};
 
 #[repr(transparent)]
 /// A raw pointer that owns its pointee

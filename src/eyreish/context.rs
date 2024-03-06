@@ -1,8 +1,8 @@
 use super::error::{ContextError, ErrorImpl};
 use super::{Report, WrapErr};
+use crate::StdError;
+use alloc::boxed::Box;
 use core::fmt::{self, Debug, Display, Write};
-
-use std::error::Error as StdError;
 
 use crate::{Diagnostic, LabeledSpan};
 

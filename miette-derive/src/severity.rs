@@ -71,9 +71,7 @@ impl Severity {
                     syn::Fields::Unnamed(_) => quote! { (..) },
                     syn::Fields::Unit => quote! {},
                 };
-                Some(
-                    quote! { Self::#ident #fields => std::option::Option::Some(miette::Severity::#severity), },
-                )
+                Some(quote! { Self::#ident #fields => Some(miette::Severity::#severity), })
             },
         )
     }
@@ -81,7 +79,7 @@ impl Severity {
     pub(crate) fn gen_struct(&self) -> Option<TokenStream> {
         let sev = &self.0;
         Some(quote! {
-            fn severity(&self) -> std::option::Option<miette::Severity> {
+            fn severity(&self) -> Option<miette::Severity> {
                 Some(miette::Severity::#sev)
             }
         })

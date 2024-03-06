@@ -1,5 +1,3 @@
-use std::path::Path;
-
 // all syntect imports are explicitly qualified, but their paths are shortened for convenience
 mod syntect {
     pub(super) use syntect::{
@@ -88,20 +86,38 @@ impl SyntectHighlighter {
         }
         // otherwise try to use any file extension provided in the name
         if let Some(name) = contents.name() {
-            if let Some(ext) = Path::new(name).extension() {
-                return self
-                    .syntax_set
-                    .find_syntax_by_extension(ext.to_string_lossy().as_ref());
+            if let Some(ext) = get_extension(name) {
+                return self.syntax_set.find_syntax_by_extension(&ext);
             }
         }
         // finally, attempt to guess syntax based on first line
         return self.syntax_set.find_syntax_by_first_line(
-            &std::str::from_utf8(contents.data())
+            &core::str::from_utf8(contents.data())
                 .ok()?
                 .split('\n')
                 .next()?,
         );
     }
+}
+
+#[cfg(feature = "std")]
+fn get_extension<P: AsRef<std::path::Path>>(path: P) -> Option<String> {
+    path.as_ref().extension().map(|ext| ext.to_string_lossy())
+}
+
+#[cfg(not(feature = "std"))]
+fn get_extension<P: AsRef<str>>(path: P) -> Option<String> {
+    let path = path.as_ref();
+    if path.starts_with(".") {
+        return None;
+    }
+    path.rsplit_once(".").and_then(|(_, ext)| {
+        if ext.is_empty() {
+            None
+        } else {
+            Some(ext.to_string())
+        }
+    })
 }
 
 /// Stateful highlighting iterator for [SyntectHighlighter]

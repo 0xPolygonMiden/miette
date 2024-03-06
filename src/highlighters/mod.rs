@@ -11,7 +11,8 @@
 //! * `syntect-highlighter` - Enables [`syntect`](https://docs.rs/syntect/latest/syntect/) syntax highlighting support via the [`SyntectHighlighter`]
 //!
 
-use std::{ops::Deref, sync::Arc};
+use alloc::{boxed::Box, sync::Arc, vec::Vec};
+use core::{fmt, ops::Deref};
 
 use crate::SpanContents;
 use owo_colors::Styled;
@@ -78,7 +79,7 @@ impl MietteHighlighter {
 }
 
 impl Default for MietteHighlighter {
-    #[cfg(feature = "syntect-highlighter")]
+    #[cfg(all(feature = "std", feature = "syntect-highlighter"))]
     fn default() -> Self {
         use std::io::IsTerminal;
         match std::env::var("NO_COLOR") {
@@ -90,9 +91,16 @@ impl Default for MietteHighlighter {
             _ => Self(Arc::new(SyntectHighlighter::default())),
         }
     }
-    #[cfg(not(feature = "syntect-highlighter"))]
+    #[cfg(all(not(feature = "std"), feature = "syntect-highlighter"))]
     fn default() -> Self {
-        return MietteHighlighter::nocolor();
+        Self(Arc::new(SyntectHighlighter::default()))
+    }
+    #[cfg(any(
+        not(any(feature = "std", feature = "syntect-highlighter")),
+        all(feature = "std", not(feature = "syntext-highlighter"))
+    ))]
+    fn default() -> Self {
+        MietteHighlighter::nocolor()
     }
 }
 
@@ -102,8 +110,8 @@ impl<T: Highlighter + Send + Sync + 'static> From<T> for MietteHighlighter {
     }
 }
 
-impl std::fmt::Debug for MietteHighlighter {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+impl fmt::Debug for MietteHighlighter {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "MietteHighlighter(...)")
     }
 }

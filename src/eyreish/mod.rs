@@ -4,9 +4,11 @@
     clippy::new_ret_no_self,
     clippy::wrong_self_convention
 )]
+use crate::StdError;
+use alloc::boxed::Box;
 use core::fmt::Display;
 
-use std::error::Error as StdError;
+#[cfg(feature = "std")]
 use std::sync::OnceLock;
 
 #[allow(unreachable_pub)]
@@ -61,7 +63,13 @@ unsafe impl Send for Report {}
 pub type ErrorHook =
     Box<dyn Fn(&(dyn Diagnostic + 'static)) -> Box<dyn ReportHandler> + Sync + Send + 'static>;
 
+#[cfg(feature = "std")]
 static HOOK: OnceLock<ErrorHook> = OnceLock::new();
+
+#[cfg(not(feature = "std"))]
+static HOOK: spin::Lazy<spin::Mutex<Option<ErrorHook>>> = spin::Lazy::new(|| {
+    spin::Mutex::new(None)
+});
 
 /// Error indicating that [`set_hook()`] was unable to install the provided
 /// [`ErrorHook`].
@@ -80,12 +88,27 @@ impl Diagnostic for InstallError {}
 /**
 Set the error hook.
 */
+#[cfg(feature = "std")]
 pub fn set_hook(hook: ErrorHook) -> Result<(), InstallError> {
     HOOK.set(hook).map_err(|_| InstallError)
 }
 
+/**
+Set the error hook.
+*/
+#[cfg(not(feature = "std"))]
+pub fn set_hook(hook: ErrorHook) -> Result<(), InstallError> {
+    let mut guard = HOOK.try_lock().ok_or(InstallError)?;
+    if guard.is_some() {
+        return Err(InstallError);
+    }
+    guard.replace(hook);
+    Ok(())
+}
+
 #[cfg_attr(track_caller, track_caller)]
 #[cfg_attr(not(track_caller), allow(unused_mut))]
+#[cfg(feature = "std")]
 fn capture_handler(error: &(dyn Diagnostic + 'static)) -> Box<dyn ReportHandler> {
     let hook = HOOK.get_or_init(|| Box::new(get_default_printer)).as_ref();
 
@@ -98,6 +121,40 @@ fn capture_handler(error: &(dyn Diagnostic + 'static)) -> Box<dyn ReportHandler>
     #[cfg(not(track_caller))]
     {
         hook(error)
+    }
+}
+
+#[cfg_attr(track_caller, track_caller)]
+#[cfg_attr(not(track_caller), allow(unused_mut))]
+#[cfg(not(feature = "std"))]
+fn capture_handler(error: &(dyn Diagnostic + 'static)) -> Box<dyn ReportHandler> {
+    let mut hook = HOOK.lock();
+    match hook.as_ref() {
+        Some(hook) => {
+            #[cfg(track_caller)]
+            {
+                let mut handler = hook(error);
+                handler.track_caller(core::panic::Location::caller());
+                handler
+            }
+            #[cfg(not(track_caller))]
+            {
+                hook(error)
+            }
+        }
+        None => {
+            let hook = hook.insert(Box::new(get_default_printer));
+            #[cfg(track_caller)]
+            {
+                let mut handler = hook(error);
+                handler.track_caller(core::panic::Location::caller());
+                handler
+            }
+            #[cfg(not(track_caller))]
+            {
+                hook(error)
+            }
+        }
     }
 }
 
@@ -197,7 +254,7 @@ pub trait ReportHandler: core::any::Any + Send + Sync {
 
     /// Store the location of the caller who constructed this error report
     #[allow(unused_variables)]
-    fn track_caller(&mut self, location: &'static std::panic::Location<'static>) {}
+    fn track_caller(&mut self, location: &'static core::panic::Location<'static>) {}
 }
 
 /// type alias for `Result<T, Report>`

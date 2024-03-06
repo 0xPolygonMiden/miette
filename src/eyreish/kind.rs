@@ -46,6 +46,7 @@
 //     (&error).miette_kind().new(error)
 
 use super::Report;
+use alloc::boxed::Box;
 use core::fmt::{Debug, Display};
 
 use crate::Diagnostic;

@@ -1,12 +1,10 @@
-use std::{
-    error::Error,
-    fmt::{Debug, Display},
-};
+use alloc::{boxed::Box, string::String, vec::Vec};
+use core::fmt::{self, Debug, Display};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::{Diagnostic, LabeledSpan, Severity};
+use crate::{Diagnostic, LabeledSpan, Severity, StdError};
 
 /// Diagnostic that can be created at runtime.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -39,12 +37,12 @@ pub struct MietteDiagnostic {
 }
 
 impl Display for MietteDiagnostic {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", &self.message)
     }
 }
 
-impl Error for MietteDiagnostic {}
+impl StdError for MietteDiagnostic {}
 
 impl Diagnostic for MietteDiagnostic {
     fn code<'a>(&'a self) -> Option<Box<dyn Display + 'a>> {

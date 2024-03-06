@@ -1,3 +1,5 @@
+use alloc::{boxed::Box, vec::Vec};
+
 use owo_colors::Style;
 
 use crate::SpanContents;

@@ -1,4 +1,5 @@
-use std::fmt;
+use alloc::{string::ToString, vec::Vec};
+use core::fmt;
 
 use crate::{protocol::Diagnostic, ReportHandler};
 

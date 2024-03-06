@@ -1,7 +1,15 @@
 /*!
 Default trait implementations for [`SourceCode`].
 */
-use std::{borrow::Cow, collections::VecDeque, fmt::Debug, sync::Arc};
+use alloc::{
+    borrow::{Cow, ToOwned},
+    boxed::Box,
+    collections::VecDeque,
+    string::String,
+    sync::Arc,
+    vec::Vec,
+};
+use core::fmt::Debug;
 
 use crate::{MietteError, MietteSpanContents, SourceCode, SourceSpan, SpanContents};
 

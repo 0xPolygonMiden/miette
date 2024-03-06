@@ -3,21 +3,22 @@ This module defines the core of the miette protocol: a series of types and
 traits that you can implement to get access to miette's (and related library's)
 full reporting and such features.
 */
-use std::{
+use alloc::{boxed::Box, string::String};
+use core::{
     fmt::{self, Display},
-    fs,
     panic::Location,
 };
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::MietteError;
+use crate::{MietteError, StdError};
 
 /// Adds rich metadata to your Error that can be used by
 /// [`Report`](crate::Report) to print really nice and human-friendly error
 /// messages.
-pub trait Diagnostic: std::error::Error {
+
+pub trait Diagnostic: StdError {
     /// Unique diagnostic code that can be used to look up more information
     /// about this `Diagnostic`. Ideally also globally unique, and documented
     /// in the toplevel crate's documentation for easy searching. Rust path
@@ -64,7 +65,7 @@ pub trait Diagnostic: std::error::Error {
     }
 
     /// The cause of the error.
-    fn diagnostic_source(&self) -> Option<&dyn Diagnostic> {
+    fn diagnostic_source<'a>(&'a self) -> Option<&(dyn Diagnostic + 'a)> {
         None
     }
 }
@@ -72,12 +73,12 @@ pub trait Diagnostic: std::error::Error {
 macro_rules! box_error_impls {
     ($($box_type:ty),*) => {
         $(
-            impl std::error::Error for $box_type {
-                fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+            impl StdError for $box_type {
+                fn source(&self) -> Option<&(dyn StdError + 'static)> {
                     (**self).source()
                 }
 
-                fn cause(&self) -> Option<&dyn std::error::Error> {
+                fn cause(&self) -> Option<&dyn StdError> {
                     self.source()
                 }
             }
@@ -94,7 +95,7 @@ box_error_impls! {
 macro_rules! box_borrow_impls {
     ($($box_type:ty),*) => {
         $(
-            impl std::borrow::Borrow<dyn Diagnostic> for $box_type {
+            impl alloc::borrow::Borrow<dyn Diagnostic> for $box_type {
                 fn borrow(&self) -> &(dyn Diagnostic + 'static) {
                     self.as_ref()
                 }
@@ -152,7 +153,7 @@ impl From<String> for Box<dyn Diagnostic + Send + Sync> {
     fn from(s: String) -> Self {
         struct StringError(String);
 
-        impl std::error::Error for StringError {}
+        impl StdError for StringError {}
         impl Diagnostic for StringError {}
 
         impl Display for StringError {
@@ -172,11 +173,14 @@ impl From<String> for Box<dyn Diagnostic + Send + Sync> {
     }
 }
 
-impl From<Box<dyn std::error::Error + Send + Sync>> for Box<dyn Diagnostic + Send + Sync> {
-    fn from(s: Box<dyn std::error::Error + Send + Sync>) -> Self {
-        #[derive(thiserror::Error)]
-        #[error(transparent)]
-        struct BoxedDiagnostic(Box<dyn std::error::Error + Send + Sync>);
+impl From<Box<dyn StdError + Send + Sync>> for Box<dyn Diagnostic + Send + Sync> {
+    fn from(s: Box<dyn StdError + Send + Sync>) -> Self {
+        struct BoxedDiagnostic(Box<dyn StdError + Send + Sync>);
+        impl fmt::Display for BoxedDiagnostic {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+                fmt::Display::fmt(&self.0, f)
+            }
+        }
         impl fmt::Debug for BoxedDiagnostic {
             fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 fmt::Debug::fmt(&self.0, f)
@@ -184,6 +188,11 @@ impl From<Box<dyn std::error::Error + Send + Sync>> for Box<dyn Diagnostic + Sen
         }
 
         impl Diagnostic for BoxedDiagnostic {}
+        impl StdError for BoxedDiagnostic {
+            fn source(&self) -> Option<&(dyn StdError + 'static)> {
+                self.0.source()
+            }
+        }
 
         Box::new(BoxedDiagnostic(s))
     }
@@ -605,8 +614,8 @@ impl From<(SourceOffset, usize)> for SourceSpan {
     }
 }
 
-impl From<std::ops::Range<ByteOffset>> for SourceSpan {
-    fn from(range: std::ops::Range<ByteOffset>) -> Self {
+impl From<core::ops::Range<ByteOffset>> for SourceSpan {
+    fn from(range: core::ops::Range<ByteOffset>) -> Self {
         Self {
             offset: range.start.into(),
             length: range.len(),
@@ -708,10 +717,23 @@ impl SourceOffset {
         let loc = Location::caller();
         Ok((
             loc.file().into(),
-            fs::read_to_string(loc.file())
+            read_to_string(loc.file())
                 .map(|txt| Self::from_location(txt, loc.line() as usize, loc.column() as usize))?,
         ))
     }
+}
+
+#[cfg(feature = "std")]
+fn read_to_string<P: AsRef<std::path::Path>>(path: P) -> std::io::Result<String> {
+    std::fs::read_to_string(path)
+}
+
+#[cfg(not(feature = "std"))]
+fn read_to_string<P: AsRef<str>>(path: P) -> Result<String, String> {
+    Err(format!(
+        "unable to read {path}: no file system",
+        path = path.as_ref()
+    ))
 }
 
 impl From<ByteOffset> for SourceOffset {

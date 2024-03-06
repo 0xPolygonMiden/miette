@@ -1,4 +1,9 @@
-use std::fmt::{self, Write};
+use alloc::{
+    boxed::Box,
+    string::{String, ToString},
+    vec::Vec,
+};
+use core::fmt::{self, Write};
 
 use owo_colors::{OwoColorize, Style, StyledList};
 use unicode_width::UnicodeWidthChar;
@@ -466,7 +471,7 @@ impl GraphicalReportHandler {
                 // The snippets will overlap, so we create one Big Chunky Boi
                 let left_end = left.offset() + left.len();
                 let right_end = right.offset() + right.len();
-                let new_end = std::cmp::max(left_end, right_end);
+                let new_end = core::cmp::max(left_end, right_end);
 
                 let new_span = LabeledSpan::new(
                     left.label().map(String::from),
@@ -533,7 +538,7 @@ impl GraphicalReportHandler {
                     num_highlights += 1;
                 }
             }
-            max_gutter = std::cmp::max(max_gutter, num_highlights);
+            max_gutter = core::cmp::max(max_gutter, num_highlights);
         }
 
         // Oh and one more thing: We need to figure out how much room our line
@@ -891,12 +896,10 @@ impl GraphicalReportHandler {
                     } else {
                         result.push_str(opts.initial_indent);
                     }
+                } else if line.trim().is_empty() {
+                    result.push_str(trimmed_indent);
                 } else {
-                    if line.trim().is_empty() {
-                        result.push_str(trimmed_indent);
-                    } else {
-                        result.push_str(opts.subsequent_indent);
-                    }
+                    result.push_str(opts.subsequent_indent);
                 }
                 result.push_str(line);
             }
@@ -1054,7 +1057,7 @@ impl GraphicalReportHandler {
                     .style(hl.style)
                     .to_string(),
                 );
-                highest = std::cmp::max(highest, end);
+                highest = core::cmp::max(highest, end);
 
                 (hl, vbar_offset)
             })
@@ -1188,7 +1191,7 @@ impl GraphicalReportHandler {
         let context_data = source
             .read_span(context_span, self.context_lines, self.context_lines)
             .map_err(|_| fmt::Error)?;
-        let context = std::str::from_utf8(context_data.data()).expect("Bad utf8 detected");
+        let context = core::str::from_utf8(context_data.data()).expect("Bad utf8 detected");
         let mut line = context_data.line();
         let mut column = context_data.column();
         let mut offset = context_data.span().offset();

@@ -1,13 +1,23 @@
-use thiserror::Error;
-
+use crate::StdError;
 use crate::{Diagnostic, Report};
+use alloc::boxed::Box;
+use core::fmt;
 
 /// Convenience [`Diagnostic`] that can be used as an "anonymous" wrapper for
 /// Errors. This is intended to be paired with [`IntoDiagnostic`].
-#[derive(Debug, Error)]
-#[error(transparent)]
-struct DiagnosticError(Box<dyn std::error::Error + Send + Sync + 'static>);
+#[derive(Debug)]
+struct DiagnosticError(Box<dyn StdError + Send + Sync + 'static>);
 impl Diagnostic for DiagnosticError {}
+impl fmt::Display for DiagnosticError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        fmt::Display::fmt(self.0.as_ref(), f)
+    }
+}
+impl StdError for DiagnosticError {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
+        self.0.source()
+    }
+}
 
 /**
 Convenience trait that adds a [`.into_diagnostic()`](IntoDiagnostic::into_diagnostic) method that converts a type implementing
@@ -26,7 +36,7 @@ pub trait IntoDiagnostic<T, E> {
     fn into_diagnostic(self) -> Result<T, Report>;
 }
 
-impl<T, E: std::error::Error + Send + Sync + 'static> IntoDiagnostic<T, E> for Result<T, E> {
+impl<T, E: StdError + Send + Sync + 'static> IntoDiagnostic<T, E> for Result<T, E> {
     fn into_diagnostic(self) -> Result<T, Report> {
         self.map_err(|e| DiagnosticError(Box::new(e)).into())
     }

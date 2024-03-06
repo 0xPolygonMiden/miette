@@ -1,14 +1,15 @@
+use alloc::boxed::Box;
 use core::any::TypeId;
 use core::fmt::{self, Debug, Display};
 use core::mem::ManuallyDrop;
 use core::ptr::{self, NonNull};
-use std::error::Error as StdError;
 
 use super::ptr::{Mut, Own, Ref};
 use super::Report;
 use super::ReportHandler;
 use crate::chain::Chain;
 use crate::eyreish::wrapper::WithSourceCode;
+use crate::StdError;
 use crate::{Diagnostic, SourceCode};
 use core::ops::{Deref, DerefMut};
 
@@ -720,7 +721,7 @@ impl<E> StdError for ErrorImpl<E>
 where
     E: StdError,
 {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+    fn source(&self) -> Option<&(dyn StdError + 'static)> {
         unsafe { ErrorImpl::diagnostic(self.erase()).source() }
     }
 }
@@ -803,7 +804,7 @@ impl AsRef<dyn StdError> for Report {
     }
 }
 
-impl std::borrow::Borrow<dyn Diagnostic> for Report {
+impl alloc::borrow::Borrow<dyn Diagnostic> for Report {
     fn borrow(&self) -> &(dyn Diagnostic + 'static) {
         self.as_ref()
     }

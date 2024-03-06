@@ -4,8 +4,8 @@ version = "7.1.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 description = "Fancy diagnostic reporting library and protocol for us mere mortals who aren't compiler hackers."
 categories = ["rust-patterns"]
-repository = "https://github.com/zkat/miette"
-documentation = "https://docs.rs/miette"
+repository = "https://github.com/bitwalker/miette"
+documentation = "https://docs.rs/miette-nostd"
 license = "Apache-2.0"
 readme = "README.md"
 edition = "2018"
@@ -13,10 +13,11 @@ rust-version = "1.70.0"
 exclude = ["images/", "tests/", "miette-derive/"]
 
 [dependencies]
-thiserror = "1.0.56"
+thiserror = { version = "1.0", git = "https://github.com/bitwalker/thiserror", branch = "no-std", default-features = false }
 miette-derive = { path = "miette-derive", version = "=7.1.0", optional = true }
-unicode-width = "0.1.11"
+unicode-width = { version = "0.1", default-features = false }
 cfg-if = "1.0.0"
+spin = { version = "0.9", default-features = false, features = ["mutex", "spin_mutex", "lazy"] }
 
 owo-colors = { version = "4.0.0", optional = true }
 textwrap = { version = "0.16.0", optional = true }
@@ -32,6 +33,9 @@ syntect = { version = "5.1.0", optional = true }
 [dev-dependencies]
 semver = "1.0.21"
 
+[build-dependencies]
+rustc_version = "0.2"
+
 # Eyre devdeps
 futures = { version = "0.3", default-features = false }
 indenter = "0.3.3"
@@ -45,16 +49,12 @@ serde_json = "1.0.113"
 strip-ansi-escapes = "0.2.0"
 
 [features]
-default = ["derive"]
+default = ["derive", "std"]
+std = ["thiserror/std", "fancy-no-syscall"]
 derive = ["miette-derive"]
 no-format-args-capture = []
-fancy-base = [
-    "owo-colors",
-    "textwrap",
-]
-fancy-no-syscall = [
-    "fancy-base",
-]
+fancy-base = ["owo-colors", "textwrap"]
+fancy-no-syscall = ["fancy-base"]
 fancy-no-backtrace = [
     "fancy-base",
     "terminal_size",

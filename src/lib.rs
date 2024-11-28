@@ -778,7 +778,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-pub use thiserror::StdError;
+pub use core::error::Error as StdError;
 
 #[cfg(feature = "derive")]
 pub use miette_derive::*;

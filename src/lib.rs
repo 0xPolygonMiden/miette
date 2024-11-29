@@ -1,7 +1,6 @@
 #![deny(missing_docs, missing_debug_implementations, nonstandard_style)]
 #![warn(unreachable_pub, rust_2018_idioms)]
 #![no_std]
-#![cfg_attr(feature = "nightly", feature(error_in_core))]
 //! You run miette? You run her code like the software? Oh. Oh! Error code for
 //! coder! Error code for One Thousand Lines!
 //!
@@ -778,7 +777,7 @@ extern crate alloc;
 #[cfg(feature = "std")]
 extern crate std;
 
-pub use thiserror::StdError;
+pub use core::error::Error as StdError;
 
 #[cfg(feature = "derive")]
 pub use miette_derive::*;

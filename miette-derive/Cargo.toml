@@ -1,11 +1,11 @@
 [package]
-name = "miette-derive"
-version = "7.1.0"
+name = "miden-miette-derive"
+version = "7.2.0"
 authors = ["Kat Marchán <kzm@zkat.tech>"]
 edition = "2018"
 license = "Apache-2.0"
 description = "Derive macros for miette. Like `thiserror` for Diagnostics."
-repository = "https://github.com/zkat/miette"
+repository = "https://github.com/0xPolygonMiden/miette"
 
 [lib]
 proc-macro = true

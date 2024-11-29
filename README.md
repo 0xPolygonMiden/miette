@@ -1,3 +1,4 @@
+This is a modified version of [miette](https://github.com/zkat/miette) with `no-std` support.
 
 # `miette`
 
